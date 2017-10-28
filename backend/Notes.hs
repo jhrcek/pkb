@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Notes where
 
-import Data.Text.Lazy
 import Data.Aeson
+import Data.Text.Lazy
 
 data Note = Note
-    { nId :: Int
+    { nId    :: Int
     , nTitle :: Text
     , nBody  :: Text
     } deriving Show

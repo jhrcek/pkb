@@ -23,6 +23,7 @@ executable pkb
                      , directory
                      , mtl
                      , aeson
+                     , filepath
   hs-source-dirs:      backend
   default-language:    Haskell2010
 

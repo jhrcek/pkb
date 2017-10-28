@@ -1,8 +1,8 @@
 module Main exposing (main)
 
-import Html exposing (Html, button, div, text)
-import Html.Events exposing (onClick)
+import Html exposing (Html, div, h3, text)
 import Http
+import Markdown
 import Navigation
 import Note exposing (Note)
 
@@ -23,19 +23,20 @@ type alias Model =
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init _ =
-    ( [ Note 1 "title" "body" ], Cmd.none )
+    ( []
+    , Http.send NotesReceived (Http.get "/notes" Note.notesDecoder)
+    )
 
 
 type Msg
     = UrlChange Navigation.Location
     | NotesReceived (Result Http.Error (List Note))
-    | NoteRequested
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UrlChange location ->
+        UrlChange _ ->
             model ! []
 
         NotesReceived result ->
@@ -50,13 +51,15 @@ update msg model =
                 Ok notes ->
                     notes ! []
 
-        NoteRequested ->
-            model ! [ Http.send NotesReceived (Http.get "/notes" Note.notesDecoder) ]
-
 
 view : Model -> Html Msg
 view model =
+    div [] <| List.map viewNote model
+
+
+viewNote : Note -> Html a
+viewNote note =
     div []
-        [ button [ onClick NoteRequested ] [ text "Get note" ]
-        , div [] [ text <| toString model ]
+        [ h3 [] [ text note.nTitle ]
+        , Markdown.toHtml [] note.nBody
         ]

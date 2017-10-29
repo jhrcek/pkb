@@ -12,7 +12,7 @@ import Data.Monoid ((<>))
 
 --TODO make this configurable
 notesDir :: FilePath
-notesDir = "/home/hrk/Tmp/pkbDev"
+notesDir = "/home/hrk/Dropbox/Reference/Work/HowTos"
 
 --TODO dubious combination of strict text (I want all notes to be loaded eagerly on app initialization)
 -- and lazy text - investigate if there's a better way

@@ -1,6 +1,8 @@
 module Main exposing (main)
 
-import Html exposing (Html, div, h3, text)
+import Html exposing (Html, div, h3, input, label, text)
+import Html.Attributes exposing (checked, type_)
+import Html.Events exposing (onCheck, onInput)
 import Http
 import Markdown
 import Navigation
@@ -18,12 +20,25 @@ main =
 
 
 type alias Model =
-    List Note
+    { notes : List Note
+    , searchFilter : SearchFilter
+    }
+
+
+type SearchFilter
+    = SearchFilter String MatchType
+
+
+type MatchType
+    = TitleOnly
+    | TitleAndBody
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init _ =
-    ( []
+    ( { notes = []
+      , searchFilter = SearchFilter "" TitleAndBody
+      }
     , Http.send NotesReceived (Http.get "/notes" Note.notesDecoder)
     )
 
@@ -31,6 +46,8 @@ init _ =
 type Msg
     = UrlChange Navigation.Location
     | NotesReceived (Result Http.Error (List Note))
+    | ChangeFilterText String
+    | ChangeFilterMatchType MatchType
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -49,12 +66,51 @@ update msg model =
                     model ! []
 
                 Ok notes ->
-                    notes ! []
+                    { model | notes = notes } ! []
+
+        ChangeFilterText filterText ->
+            { model | searchFilter = setFilterText filterText model.searchFilter } ! []
+
+        ChangeFilterMatchType matchType ->
+            { model | searchFilter = setFilterMatchType matchType model.searchFilter } ! []
+
+
+setFilterText : String -> SearchFilter -> SearchFilter
+setFilterText newText (SearchFilter _ mt) =
+    SearchFilter newText mt
+
+
+setFilterMatchType : MatchType -> SearchFilter -> SearchFilter
+setFilterMatchType matchType (SearchFilter filterText _) =
+    SearchFilter filterText matchType
+
+
+getMatchType : SearchFilter -> MatchType
+getMatchType (SearchFilter _ matchType) =
+    matchType
 
 
 view : Model -> Html Msg
 view model =
-    div [] <| List.map viewNote model
+    div []
+        [ input [ type_ "text", onInput ChangeFilterText ] []
+        , label []
+            [ input
+                [ type_ "checkbox"
+                , checked (getMatchType model.searchFilter == TitleOnly)
+                , onCheck
+                    (\b ->
+                        if b then
+                            ChangeFilterMatchType TitleOnly
+                        else
+                            ChangeFilterMatchType TitleAndBody
+                    )
+                ]
+                []
+            , text "Search title only"
+            ]
+        , div [] <| List.map viewNote <| List.filter (noteMatchesFilter model.searchFilter) model.notes
+        ]
 
 
 viewNote : Note -> Html a
@@ -63,3 +119,14 @@ viewNote note =
         [ h3 [] [ text note.nTitle ]
         , Markdown.toHtml [] note.nBody
         ]
+
+
+noteMatchesFilter : SearchFilter -> Note -> Bool
+noteMatchesFilter (SearchFilter filterText matchType) note =
+    case matchType of
+        TitleOnly ->
+            String.contains filterText note.nTitle
+
+        TitleAndBody ->
+            String.contains filterText note.nTitle
+                || String.contains filterText note.nBody

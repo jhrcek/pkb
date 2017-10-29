@@ -15,7 +15,8 @@ cabal-version:       >=1.10
 
 executable pkb
   main-is:             Main.hs
-  other-modules:       Notes
+  other-modules:       Notes,
+                       Loader
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
                      , scotty

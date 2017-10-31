@@ -1,18 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Monad
-import Control.Monad.Trans
-import Data.Monoid
-import Data.Text.Lazy (pack)
+import Config
 import Loader
-import Notes
-import System.Directory (listDirectory)
 import Web.Scotty
 
 main :: IO ()
 main = do
-  notes <- Loader.loadNotes
+  config <- Config.parseConfig
+  notes <- Loader.loadNotes (notesDir config)
   scotty 3000 $ do
     get "/" $ file "index.html"
     get "/script.js" $ file "script.js"

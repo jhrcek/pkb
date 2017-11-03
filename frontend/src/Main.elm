@@ -1,7 +1,7 @@
 module Main exposing (main)
 
-import Html exposing (Html, div, h3, input, label, text)
-import Html.Attributes exposing (checked, type_)
+import Html exposing (Html, details, div, input, label, summary, text)
+import Html.Attributes exposing (checked, class, type_)
 import Html.Events exposing (onCheck, onInput)
 import Http
 import Markdown
@@ -115,9 +115,9 @@ view model =
 
 viewNote : Note -> Html a
 viewNote note =
-    div []
-        [ h3 [] [ text note.nTitle ]
-        , Markdown.toHtml [] note.nBody
+    details []
+        [ summary [ class "note-title" ] [ text note.nTitle ]
+        , Markdown.toHtml [ class "note-body" ] note.nBody
         ]
 
 

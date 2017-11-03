@@ -14,4 +14,4 @@ main = do
     get "/script.js" $ file "script.js"
     get "/style.css" $ file "style.css"
     get "/notes" $ json notes
-    notFound $ html "<h1>Not found!</h1>"
+    notFound $ html "There is nothing here, pal!"

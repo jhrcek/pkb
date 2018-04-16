@@ -1,4 +1,3 @@
 #!/bin/bash
-stack build --copy-bins --local-bin-path dist
-
-(cd frontend && elm make src/Main.elm --output=../dist/script.js)
+cd frontend && elm make --yes src/Main.elm --output=../static/script.js
+stack install --pedantic

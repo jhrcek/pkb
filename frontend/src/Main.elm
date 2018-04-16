@@ -21,23 +21,25 @@ main =
 
 type alias Model =
     { notes : List Note
-    , searchFilter : SearchFilter
+    , searchSettings : SearchSettings
+    , searchQuery : SearchQuery
     }
 
 
-type SearchFilter
-    = SearchFilter String MatchType
+type SearchQuery
+    = SearchQuery String
 
 
-type MatchType
-    = TitleOnly
-    | TitleAndBody
+type SearchSettings
+    = MatchTitle
+    | MatchTitleAndBody
 
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init _ =
     ( { notes = []
-      , searchFilter = SearchFilter "" TitleAndBody
+      , searchSettings = MatchTitleAndBody
+      , searchQuery = SearchQuery ""
       }
     , Http.send NotesReceived (Http.get "/notes" Note.notesDecoder)
     )
@@ -47,7 +49,7 @@ type Msg
     = UrlChange Navigation.Location
     | NotesReceived (Result Http.Error (List Note))
     | ChangeFilterText String
-    | ChangeFilterMatchType MatchType
+    | SearchSettingsChanged SearchSettings
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,6 +61,7 @@ update msg model =
         NotesReceived result ->
             case result of
                 Err e ->
+                    -- TODO handle notes loading error
                     let
                         _ =
                             Debug.log "Error getting note " e
@@ -69,25 +72,10 @@ update msg model =
                     { model | notes = notes } ! []
 
         ChangeFilterText filterText ->
-            { model | searchFilter = setFilterText filterText model.searchFilter } ! []
+            { model | searchQuery = SearchQuery filterText } ! []
 
-        ChangeFilterMatchType matchType ->
-            { model | searchFilter = setFilterMatchType matchType model.searchFilter } ! []
-
-
-setFilterText : String -> SearchFilter -> SearchFilter
-setFilterText newText (SearchFilter _ mt) =
-    SearchFilter newText mt
-
-
-setFilterMatchType : MatchType -> SearchFilter -> SearchFilter
-setFilterMatchType matchType (SearchFilter filterText _) =
-    SearchFilter filterText matchType
-
-
-getMatchType : SearchFilter -> MatchType
-getMatchType (SearchFilter _ matchType) =
-    matchType
+        SearchSettingsChanged newSettings ->
+            { model | searchSettings = newSettings } ! []
 
 
 view : Model -> Html Msg
@@ -97,19 +85,21 @@ view model =
         , label []
             [ input
                 [ type_ "checkbox"
-                , checked (getMatchType model.searchFilter == TitleOnly)
+                , checked (model.searchSettings == MatchTitle)
                 , onCheck
                     (\b ->
-                        if b then
-                            ChangeFilterMatchType TitleOnly
-                        else
-                            ChangeFilterMatchType TitleAndBody
+                        SearchSettingsChanged
+                            (if b then
+                                MatchTitle
+                             else
+                                MatchTitleAndBody
+                            )
                     )
                 ]
                 []
             , text "Search title only"
             ]
-        , div [] <| List.map viewNote <| List.filter (noteMatchesFilter model.searchFilter) model.notes
+        , div [] <| List.map viewNote <| List.filter (noteMatchesFilter model.searchSettings model.searchQuery) model.notes
         ]
 
 
@@ -121,12 +111,12 @@ viewNote note =
         ]
 
 
-noteMatchesFilter : SearchFilter -> Note -> Bool
-noteMatchesFilter (SearchFilter filterText matchType) note =
-    case matchType of
-        TitleOnly ->
+noteMatchesFilter : SearchSettings -> SearchQuery -> Note -> Bool
+noteMatchesFilter searchSettings (SearchQuery filterText) note =
+    case searchSettings of
+        MatchTitle ->
             String.contains filterText note.nTitle
 
-        TitleAndBody ->
+        MatchTitleAndBody ->
             String.contains filterText note.nTitle
                 || String.contains filterText note.nBody

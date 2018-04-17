@@ -1,8 +1,8 @@
 module Main exposing (main)
 
-import Html exposing (Html, details, div, input, label, summary, text)
-import Html.Attributes exposing (checked, class, type_)
-import Html.Events exposing (onCheck, onInput)
+import Html exposing (Html, button, details, div, input, label, summary, text)
+import Html.Attributes exposing (checked, class, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput)
 import Http
 import Markdown
 import Navigation
@@ -51,24 +51,33 @@ init _ =
 type Msg
     = UrlChange Navigation.Location
     | NotesReceived (WebData (List Note))
-    | ChangeFilterText String
+    | SetSearchQuery String
     | SearchSettingsChanged SearchSettings
+    | ClearSearchQuery
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    ( updatePure msg model, Cmd.none )
+
+
+updatePure : Msg -> Model -> Model
+updatePure msg model =
     case msg of
         UrlChange _ ->
-            model ! []
+            model
 
         NotesReceived nodesWebData ->
-            { model | notes = nodesWebData } ! []
+            { model | notes = nodesWebData }
 
-        ChangeFilterText filterText ->
-            { model | searchQuery = SearchQuery filterText } ! []
+        SetSearchQuery query ->
+            { model | searchQuery = SearchQuery query }
+
+        ClearSearchQuery ->
+            { model | searchQuery = SearchQuery "" }
 
         SearchSettingsChanged newSettings ->
-            { model | searchSettings = newSettings } ! []
+            { model | searchSettings = newSettings }
 
 
 viewNotes : Model -> Html Msg
@@ -90,15 +99,16 @@ viewNotes model =
 view : Model -> Html Msg
 view model =
     div []
-        [ searchBar model.searchSettings
+        [ searchBar model.searchSettings model.searchQuery
         , viewNotes model
         ]
 
 
-searchBar : SearchSettings -> Html Msg
-searchBar searchSettings =
+searchBar : SearchSettings -> SearchQuery -> Html Msg
+searchBar searchSettings (SearchQuery queryString) =
     div []
-        [ input [ type_ "text", onInput ChangeFilterText ] []
+        [ input [ type_ "text", onInput SetSearchQuery, value queryString ] []
+        , button [ onClick ClearSearchQuery ] [ text "Clear" ]
         , label []
             [ input
                 [ type_ "checkbox"

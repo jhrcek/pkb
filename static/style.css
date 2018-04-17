@@ -6,9 +6,10 @@
   background-color: lightgrey;
 }
 
-/* TODO: come up with a better way to override user agent stylesheets in snippets generated from markdown  */
+.highlight {
+  background-color: yellow;
+}
 
-.note-body h1, .note-body h2, .note-body h3, .note-body p, .note-body ul {
-  margin-top: 0px;
-  margin-bottom: 0px;
+.note-body {
+  overflow: auto;
 }

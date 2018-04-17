@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import Highlight
 import Html exposing (Html, button, details, div, input, label, summary, text)
 import Html.Attributes exposing (checked, class, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput)
@@ -80,6 +81,14 @@ updatePure msg model =
             { model | searchSettings = newSettings }
 
 
+view : Model -> Html Msg
+view model =
+    div []
+        [ searchBar model.searchSettings model.searchQuery
+        , viewNotes model
+        ]
+
+
 viewNotes : Model -> Html Msg
 viewNotes model =
     case model.notes of
@@ -96,16 +105,8 @@ viewNotes model =
             loadedNotes
                 |> List.filter (noteMatchesQuery model.searchSettings model.searchQuery)
                 |> List.sortBy .nTitle
-                |> List.map viewNote
+                |> List.map (viewNote model.searchQuery)
                 |> div []
-
-
-view : Model -> Html Msg
-view model =
-    div []
-        [ searchBar model.searchSettings model.searchQuery
-        , viewNotes model
-        ]
 
 
 searchBar : SearchSettings -> SearchQuery -> Html Msg
@@ -133,10 +134,10 @@ searchBar searchSettings (SearchQuery queryString) =
         ]
 
 
-viewNote : Note -> Html a
-viewNote note =
+viewNote : SearchQuery -> Note -> Html a
+viewNote (SearchQuery searchQuery) note =
     details []
-        [ summary [ class "note-title" ] [ text note.nTitle ]
+        [ summary [ class "note-title" ] [ Highlight.highlight searchQuery note.nTitle ]
         , Markdown.toHtml [ class "note-body" ] note.nBody
         ]
 

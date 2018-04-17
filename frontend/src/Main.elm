@@ -7,6 +7,7 @@ import Http
 import Markdown
 import Navigation
 import Note exposing (Note)
+import RemoteData exposing (WebData)
 
 
 main : Program Never Model Msg
@@ -20,7 +21,7 @@ main =
 
 
 type alias Model =
-    { notes : List Note
+    { notes : WebData (List Note)
     , searchSettings : SearchSettings
     , searchQuery : SearchQuery
     }
@@ -37,17 +38,19 @@ type SearchSettings
 
 init : Navigation.Location -> ( Model, Cmd Msg )
 init _ =
-    ( { notes = []
+    ( { notes = RemoteData.Loading
       , searchSettings = MatchTitleAndBody
       , searchQuery = SearchQuery ""
       }
-    , Http.send NotesReceived (Http.get "/notes" Note.notesDecoder)
+    , Http.get "/notes" Note.notesDecoder
+        |> RemoteData.sendRequest
+        |> Cmd.map NotesReceived
     )
 
 
 type Msg
     = UrlChange Navigation.Location
-    | NotesReceived (Result Http.Error (List Note))
+    | NotesReceived (WebData (List Note))
     | ChangeFilterText String
     | SearchSettingsChanged SearchSettings
 
@@ -58,18 +61,8 @@ update msg model =
         UrlChange _ ->
             model ! []
 
-        NotesReceived result ->
-            case result of
-                Err e ->
-                    -- TODO handle notes loading error
-                    let
-                        _ =
-                            Debug.log "Error getting note " e
-                    in
-                    model ! []
-
-                Ok notes ->
-                    { model | notes = notes } ! []
+        NotesReceived nodesWebData ->
+            { model | notes = nodesWebData } ! []
 
         ChangeFilterText filterText ->
             { model | searchQuery = SearchQuery filterText } ! []
@@ -78,14 +71,38 @@ update msg model =
             { model | searchSettings = newSettings } ! []
 
 
+viewNotes : Model -> Html Msg
+viewNotes model =
+    case model.notes of
+        RemoteData.Loading ->
+            text "Loading ..."
+
+        RemoteData.NotAsked ->
+            text "We shoulnd never end up in 'NotAsked' state"
+
+        RemoteData.Failure error ->
+            text ("Error loading notes" ++ toString error)
+
+        RemoteData.Success loadedNotes ->
+            div [] <| List.map viewNote <| List.filter (noteMatchesFilter model.searchSettings model.searchQuery) loadedNotes
+
+
 view : Model -> Html Msg
 view model =
+    div []
+        [ searchBar model.searchSettings
+        , viewNotes model
+        ]
+
+
+searchBar : SearchSettings -> Html Msg
+searchBar searchSettings =
     div []
         [ input [ type_ "text", onInput ChangeFilterText ] []
         , label []
             [ input
                 [ type_ "checkbox"
-                , checked (model.searchSettings == MatchTitle)
+                , checked (searchSettings == MatchTitle)
                 , onCheck
                     (\b ->
                         SearchSettingsChanged
@@ -99,7 +116,6 @@ view model =
                 []
             , text "Search title only"
             ]
-        , div [] <| List.map viewNote <| List.filter (noteMatchesFilter model.searchSettings model.searchQuery) model.notes
         ]
 
 

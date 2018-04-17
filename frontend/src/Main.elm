@@ -70,8 +70,8 @@ updatePure msg model =
         NotesReceived nodesWebData ->
             { model | notes = nodesWebData }
 
-        SetSearchQuery query ->
-            { model | searchQuery = SearchQuery query }
+        SetSearchQuery queryString ->
+            { model | searchQuery = SearchQuery queryString }
 
         ClearSearchQuery ->
             { model | searchQuery = SearchQuery "" }
@@ -93,7 +93,11 @@ viewNotes model =
             text ("Error loading notes" ++ toString error)
 
         RemoteData.Success loadedNotes ->
-            div [] <| List.map viewNote <| List.filter (noteMatchesFilter model.searchSettings model.searchQuery) loadedNotes
+            loadedNotes
+                |> List.filter (noteMatchesQuery model.searchSettings model.searchQuery)
+                |> List.sortBy .nTitle
+                |> List.map viewNote
+                |> div []
 
 
 view : Model -> Html Msg
@@ -137,12 +141,12 @@ viewNote note =
         ]
 
 
-noteMatchesFilter : SearchSettings -> SearchQuery -> Note -> Bool
-noteMatchesFilter searchSettings (SearchQuery filterText) note =
+noteMatchesQuery : SearchSettings -> SearchQuery -> Note -> Bool
+noteMatchesQuery searchSettings (SearchQuery queryString) note =
     case searchSettings of
         MatchTitle ->
-            String.contains filterText note.nTitle
+            String.contains queryString note.nTitle
 
         MatchTitleAndBody ->
-            String.contains filterText note.nTitle
-                || String.contains filterText note.nBody
+            String.contains queryString note.nTitle
+                || String.contains queryString note.nBody

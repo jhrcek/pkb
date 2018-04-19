@@ -6,9 +6,10 @@ import Data.Monoid ((<>))
 import Data.Text.IO as T
 import Data.Text.Lazy (fromStrict, pack, replace)
 import Data.Text.Lazy.IO as LT
-import Notes
 import System.Directory (listDirectory)
 import System.FilePath
+
+import Data.Note
 
 --TODO dubious combination of strict text (I want all notes to be loaded eagerly on app initialization)
 -- and lazy text - investigate if there's a better way

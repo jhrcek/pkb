@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
-module Notes where
+module Data.Note where
 
 import Data.Aeson
 import Data.Text.Lazy

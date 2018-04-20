@@ -36,7 +36,8 @@ executable pkb
     other-modules:
         Data.Note
         Config
+        Handler.Notes
+        Handler.Static
         Loader
-        Pkb.Static
         Types
     ghc-options: -Wall

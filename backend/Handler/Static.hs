@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
 
-module Pkb.Static (staticAssets) where
+module Handler.Static (assetHandler) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (fromStrict)
@@ -11,8 +11,8 @@ import Web.Scotty.Trans (get, raw, setHeader)
 
 import Types (ActionC, ScottyC)
 
-staticAssets :: ScottyC ()
-staticAssets = do
+assetHandler :: ScottyC ()
+assetHandler = do
     indexHtml
     scriptJs
     styleCss

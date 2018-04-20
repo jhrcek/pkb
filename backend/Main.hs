@@ -1,25 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Reader (ReaderT, runReaderT)
 import Data.Default.Class (def)
-import qualified Loader
-import Web.Scotty.Trans (Options, get, html, json, notFound, scottyOptsT, verbose)
+import Web.Scotty.Trans (Options, html, notFound, scottyOptsT, verbose)
 
 import Config (Config)
 import qualified Config
-import qualified Pkb.Static as Static
+import qualified Handler.Notes as Notes
+import qualified Handler.Static as Static
 
 main :: IO ()
 main = do
-    config <- Config.parseConfig
+    config <- Config.parse
     putStrLn "Listening on http://localhost:3000"
     scottyOptsT quietOpts (runConfig config) $ do
-        Static.staticAssets
-        get "/notes" $ do
-            notes <- liftIO $ Loader.loadNotes (Config.notesDir config)
-            json notes
+        Static.assetHandler
+        Notes.apiHandler
         notFound $ html "There is nothing here, pal!"
 
 quietOpts :: Options

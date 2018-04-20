@@ -1,4 +1,4 @@
-module Config  (Config, parseConfig, notesDir) where
+module Config  (Config, parse, notesDir) where
 
 import Control.Monad (unless)
 import Data.Monoid
@@ -7,12 +7,10 @@ import Options.Applicative.Builder (fullDesc, info, long, metavar, short, strOpt
 import System.Directory (doesDirectoryExist)
 import System.Exit (die)
 
-newtype Config = Config
-    { notesDir :: FilePath
-    }
+newtype Config = Config { notesDir :: FilePath }
 
-parseConfig :: IO Config
-parseConfig = do
+parse :: IO Config
+parse = do
   cfg <- execParser parserInfo
   notesDirExists <- doesDirectoryExist $ notesDir cfg
   unless notesDirExists . die $ "Notes directory does not exist " <> notesDir cfg

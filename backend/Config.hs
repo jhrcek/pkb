@@ -1,14 +1,15 @@
 module Config  (Config, parseConfig, notesDir) where
-  
+
 import Control.Monad (unless)
 import Data.Monoid
 import Options.Applicative (Parser, ParserInfo, execParser)
-import Options.Applicative.Builder (fullDesc, info, long, metavar, short,
-                                    strOption)
+import Options.Applicative.Builder (fullDesc, info, long, metavar, short, strOption)
 import System.Directory (doesDirectoryExist)
 import System.Exit (die)
 
-newtype Config = Config { notesDir :: FilePath }
+newtype Config = Config
+    { notesDir :: FilePath
+    }
 
 parseConfig :: IO Config
 parseConfig = do

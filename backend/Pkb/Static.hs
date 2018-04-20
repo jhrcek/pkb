@@ -7,31 +7,33 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Lazy (fromStrict)
 import Data.FileEmbed (embedFile)
 import Data.Text.Lazy (Text)
-import Web.Scotty (ActionM, ScottyM, get, raw, setHeader)
+import Web.Scotty.Trans (get, raw, setHeader)
 
-staticAssets :: ScottyM ()
+import Types (ActionC, ScottyC)
+
+staticAssets :: ScottyC ()
 staticAssets = do
     indexHtml
     scriptJs
     styleCss
 
-indexHtml :: ScottyM ()
+indexHtml :: ScottyC ()
 indexHtml = get "/" $ do
     setContentType "text/html;charset=UTF-8"
     rawLazy $(embedFile "static/index.html")
 
-scriptJs :: ScottyM ()
+scriptJs :: ScottyC ()
 scriptJs = get "/script.js" $ do
     setContentType "text/javascript;charset=UTF-8"
     rawLazy $(embedFile "static/script.js")
 
-styleCss :: ScottyM ()
+styleCss :: ScottyC ()
 styleCss = get "/style.css" $ do
     setContentType "text/css;charset=UTF-8"
     rawLazy $(embedFile "static/style.css")
 
-setContentType :: Text -> ActionM ()
+setContentType :: Text -> ActionC ()
 setContentType = setHeader "Content-Type"
 
-rawLazy :: ByteString -> ActionM ()
-rawLazy = raw . fromStrict
+rawLazy :: ByteString -> ActionC ()
+rawLazy =  raw . fromStrict

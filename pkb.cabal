@@ -27,6 +27,7 @@ executable pkb
         directory -any,
         filepath -any,
         file-embed -any,
+        mtl -any,
         optparse-applicative -any,
         scotty -any,
         text -any
@@ -34,7 +35,8 @@ executable pkb
     hs-source-dirs: backend
     other-modules:
         Data.Note
-        Loader
         Config
+        Loader
         Pkb.Static
+        Types
     ghc-options: -Wall

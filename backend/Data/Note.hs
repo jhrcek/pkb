@@ -1,14 +1,13 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Data.Note where
 
-import Data.Aeson
+import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Text.Lazy
-import GHC.Generics
 
 data Note = Note
     { nId    :: Int
     , nTitle :: Text
     , nBody  :: Text
-    } deriving (Show, Generic)
+    } deriving (Show)
 
-instance ToJSON Note where
+$(deriveJSON defaultOptions ''Note)

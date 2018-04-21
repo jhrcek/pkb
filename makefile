@@ -2,7 +2,7 @@ script=static/script.js
 script_mini=static/script.min.js
 
 front:
-	cd frontend && elm make --yes src/Main.elm --output=../$(script)
+	cd frontend && elm make --warn --yes src/Main.elm --output=../$(script)
 
 mini: front
 	uglifyjs $(script) --compress --mangle --output $(script_mini)

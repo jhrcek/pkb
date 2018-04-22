@@ -6,6 +6,14 @@
   background-color: lightgrey;
 }
 
+.note-button {
+  float: right;
+}
+
+.note-edit-area {
+  width: 100%;
+}
+
 .highlight {
   background-color: yellow;
 }

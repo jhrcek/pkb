@@ -1,23 +1,30 @@
-module Note exposing (Note, notesDecoder)
+module Note exposing (Note, NoteId(NoteId), notesDecoder)
 
+import EveryDict exposing (EveryDict)
 import Json.Decode as Decode exposing (Decoder)
 
 
 type alias Note =
-    { nId : Int
+    { nId : NoteId
     , nTitle : String
     , nBody : String
     }
 
 
-notesDecoder : Decoder (List Note)
+type NoteId
+    = NoteId Int
+
+
+notesDecoder : Decoder (EveryDict NoteId Note)
 notesDecoder =
     Decode.list noteDecoder
+        |> Decode.map EveryDict.fromList
 
 
-noteDecoder : Decoder Note
+noteDecoder : Decoder ( NoteId, Note )
 noteDecoder =
     Decode.map3 Note
-        (Decode.field "nId" Decode.int)
+        (Decode.map NoteId (Decode.field "nId" Decode.int))
         (Decode.field "nTitle" Decode.string)
         (Decode.field "nBody" Decode.string)
+        |> Decode.map (\note -> ( note.nId, note ))

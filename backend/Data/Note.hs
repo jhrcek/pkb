@@ -5,9 +5,10 @@ import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Data.Text.Lazy
 
 data Note = Note
-    { nId    :: Int
-    , nTitle :: Text
-    , nBody  :: Text
+    { nId    :: !Int
+    , nFile  :: !FilePath
+    , nTitle :: !Text
+    , nBody  :: !Text
     } deriving (Show)
 
 $(deriveJSON defaultOptions ''Note)

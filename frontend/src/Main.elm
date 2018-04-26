@@ -1,15 +1,16 @@
 module Main exposing (main)
 
-import EveryDict exposing (EveryDict)
+import EveryDict
 import Highlight
 import Html exposing (Html, button, details, div, input, summary, text, textarea)
 import Html.Attributes exposing (class, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
-import Http
 import Markdown
 import Navigation
-import Note exposing (Note, NoteId(NoteId))
+import Note exposing (Note)
 import RemoteData exposing (WebData)
+import Requests
+import Types exposing (Msg(..), Notes)
 
 
 main : Program Never Model Msg
@@ -20,10 +21,6 @@ main =
         , update = update
         , view = view
         }
-
-
-type alias Notes =
-    EveryDict NoteId Note
 
 
 type alias Model =
@@ -57,47 +54,27 @@ init _ =
       , searchQuery = SearchQuery ""
       , noteEditState = Nothing
       }
-    , Http.get "/notes" Note.notesDecoder
-        |> RemoteData.sendRequest
-        |> Cmd.map NotesReceived
+    , Requests.getNotes
     )
-
-
-type Msg
-    = UrlChange Navigation.Location
-    | NotesReceived (WebData Notes)
-      -- Note search
-    | SetSearchQuery String
-    | ClearSearchQuery
-      -- Note editing
-    | EditNote NoteId
-    | NoteBodyChange String
-    | CancelNoteEdit
-    | SaveNoteEdit
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( updatePure msg model, Cmd.none )
-
-
-updatePure : Msg -> Model -> Model
-updatePure msg model =
     case msg of
         UrlChange _ ->
-            model
+            ( model, Cmd.none )
 
         NotesReceived notesWebData ->
-            { model | notes = notesWebData }
+            ( { model | notes = notesWebData }, Cmd.none )
 
         SetSearchQuery queryString ->
-            setQueryString queryString model
+            ( setQueryString queryString model, Cmd.none )
 
         ClearSearchQuery ->
-            setQueryString "" model
+            ( setQueryString "" model, Cmd.none )
 
         EditNote nId ->
-            { model
+            ( { model
                 | noteEditState =
                     model.notes
                         |> RemoteData.map
@@ -106,33 +83,39 @@ updatePure msg model =
                                     |> Maybe.map (\note -> NoteEditState note note.nBody)
                             )
                         |> RemoteData.withDefault Nothing
-            }
+              }
+            , Cmd.none
+            )
 
         NoteBodyChange newText ->
-            { model
+            ( { model
                 | noteEditState =
                     Maybe.map
                         (\(NoteEditState note _) -> NoteEditState note newText)
                         model.noteEditState
-            }
+              }
+            , Cmd.none
+            )
 
         CancelNoteEdit ->
-            { model | noteEditState = Nothing }
+            ( { model | noteEditState = Nothing }, Cmd.none )
 
         SaveNoteEdit ->
             case model.noteEditState of
                 Nothing ->
-                    model
+                    ( model, Cmd.none )
 
                 Just (NoteEditState origNote newBody) ->
                     let
                         newNote =
                             { origNote | nBody = newBody }
                     in
-                    { model
+                    ( { model
                         | noteEditState = Nothing
                         , notes = RemoteData.map (EveryDict.insert newNote.nId newNote) model.notes
-                    }
+                      }
+                    , Requests.postNote newNote
+                    )
 
 
 setQueryString :

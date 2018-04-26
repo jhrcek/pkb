@@ -105,17 +105,28 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
-                Just (NoteEditState origNote newBody) ->
-                    let
-                        newNote =
-                            { origNote | nBody = newBody }
-                    in
-                    ( { model
-                        | noteEditState = Nothing
-                        , notes = RemoteData.map (EveryDict.insert newNote.nId newNote) model.notes
-                      }
-                    , Requests.postNote newNote
-                    )
+                Just editState ->
+                    saveNote editState model
+
+
+saveNote : NoteEditState -> Model -> ( Model, Cmd Msg )
+saveNote (NoteEditState origNote newBody) model =
+    let
+        newNote =
+            { origNote | nBody = newBody }
+
+        command =
+            if newBody == origNote.nBody then
+                Cmd.none
+            else
+                Requests.postNote newNote
+    in
+    ( { model
+        | noteEditState = Nothing
+        , notes = RemoteData.map (EveryDict.insert newNote.nId newNote) model.notes
+      }
+    , command
+    )
 
 
 setQueryString :

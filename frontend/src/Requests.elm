@@ -3,7 +3,7 @@ module Requests exposing (getNotes, postNote)
 import Http exposing (jsonBody)
 import Note exposing (Note)
 import RemoteData
-import Types exposing (Msg(NotesReceived))
+import Types exposing (Msg(..))
 
 
 getNotes : Cmd Msg

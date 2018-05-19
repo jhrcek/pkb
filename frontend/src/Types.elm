@@ -1,13 +1,13 @@
 module Types exposing (Msg(..), Notes)
 
-import EveryDict exposing (EveryDict)
-import Navigation
+import Hash.Dict exposing (Dict)
 import Note exposing (Note, NoteId)
 import RemoteData exposing (WebData)
+import Url.Parser exposing (Url)
 
 
 type Msg
-    = UrlChange Navigation.Location
+    = UrlChange Url
     | NotesReceived (WebData Notes)
       -- Note search
     | SetSearchQuery String
@@ -20,4 +20,4 @@ type Msg
 
 
 type alias Notes =
-    EveryDict NoteId Note
+    Dict NoteId Note

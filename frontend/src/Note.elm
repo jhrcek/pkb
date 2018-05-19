@@ -1,6 +1,6 @@
-module Note exposing (Note, NoteId(NoteId), encodeNote, notesDecoder)
+module Note exposing (Note, NoteId(..), encodeNote, notesDecoder)
 
-import EveryDict exposing (EveryDict)
+import Hash.Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
 
@@ -17,10 +17,10 @@ type NoteId
     = NoteId Int
 
 
-notesDecoder : Decoder (EveryDict NoteId Note)
+notesDecoder : Decoder (Dict NoteId Note)
 notesDecoder =
     Decode.list noteDecoder
-        |> Decode.map EveryDict.fromList
+        |> Decode.map Hash.Dict.fromList
 
 
 noteDecoder : Decoder ( NoteId, Note )

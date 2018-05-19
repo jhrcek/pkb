@@ -1,24 +1,27 @@
 module Main exposing (main)
 
-import EveryDict
+import Browser
+import Hash.Dict as Dict exposing (Dict)
 import Highlight
 import Html exposing (Html, button, details, div, input, summary, text, textarea)
 import Html.Attributes exposing (class, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
+import Http exposing (Error(..))
 import Markdown
-import Navigation
 import Note exposing (Note)
 import RemoteData exposing (WebData)
 import Requests
 import Types exposing (Msg(..), Notes)
+import Url.Parser exposing (Url)
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Navigation.program UrlChange
+    Browser.fullscreen
         { init = init
         , subscriptions = always Sub.none
         , update = update
+        , onNavigation = Just UrlChange
         , view = view
         }
 
@@ -48,7 +51,7 @@ type SearchQuery
     = SearchQuery String
 
 
-init : Navigation.Location -> ( Model, Cmd Msg )
+init : Browser.Env () -> ( Model, Cmd Msg )
 init _ =
     ( { notes = RemoteData.Loading
       , searchQuery = SearchQuery ""
@@ -79,7 +82,7 @@ update msg model =
                     model.notes
                         |> RemoteData.map
                             (\notes ->
-                                EveryDict.get nId notes
+                                Dict.get nId notes
                                     |> Maybe.map (\note -> NoteEditState note note.nBody)
                             )
                         |> RemoteData.withDefault Nothing
@@ -123,7 +126,7 @@ saveNote (NoteEditState origNote newBody) model =
     in
     ( { model
         | noteEditState = Nothing
-        , notes = RemoteData.map (EveryDict.insert newNote.nId newNote) model.notes
+        , notes = RemoteData.map (Dict.insert newNote.nId newNote) model.notes
       }
     , command
     )
@@ -137,38 +140,47 @@ setQueryString queryString model =
     { model | searchQuery = SearchQuery queryString }
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Page Msg
 view model =
-    case model.notes of
-        RemoteData.Loading ->
-            text "Loading notes ..."
+    let
+        body =
+            case model.notes of
+                RemoteData.Loading ->
+                    [ text "Loading notes ..." ]
 
-        RemoteData.NotAsked ->
-            text "We should never end up in 'NotAsked' state"
+                RemoteData.NotAsked ->
+                    [ text "We should never end up in 'NotAsked' state" ]
 
-        RemoteData.Failure error ->
-            text ("Error loading notes" ++ toString error)
+                RemoteData.Failure httpError ->
+                    let
+                        _ =
+                            Debug.log "Http error occurred" httpError
+                    in
+                    [ text "Http Error occurred. See dev console for details" ]
 
-        RemoteData.Success loadedNotes ->
-            viewPage
-                { notes = loadedNotes
-                , searchQuery = model.searchQuery
-                , noteEditState = model.noteEditState
-                }
+                RemoteData.Success loadedNotes ->
+                    viewPage
+                        { notes = loadedNotes
+                        , searchQuery = model.searchQuery
+                        , noteEditState = model.noteEditState
+                        }
+    in
+    { title = "Personal Knowledge Base"
+    , body = body
+    }
 
 
-viewPage : ModelWithNotes -> Html Msg
+viewPage : ModelWithNotes -> List (Html Msg)
 viewPage model =
-    div []
-        [ searchBar model.searchQuery
-        , viewNotes model
-        ]
+    [ searchBar model.searchQuery
+    , viewNotes model
+    ]
 
 
 viewNotes : ModelWithNotes -> Html Msg
 viewNotes model =
     model.notes
-        |> EveryDict.values
+        |> Dict.values
         |> List.filter (noteMatchesQuery model.searchQuery)
         |> List.sortBy .nTitle
         |> List.map (viewNote model.noteEditState model.searchQuery)

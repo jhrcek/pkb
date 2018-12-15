@@ -1,25 +1,30 @@
 module Main exposing (main)
 
-import EveryDict
+import Browser
+import Browser.Navigation exposing (Key)
+import Dict.Any
 import Highlight
 import Html exposing (Html, button, details, div, input, summary, text, textarea)
 import Html.Attributes exposing (class, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
+import Http exposing (Error(..))
 import Markdown
-import Navigation
 import Note exposing (Note)
 import RemoteData exposing (WebData)
 import Requests
 import Types exposing (Msg(..), Notes)
+import Url exposing (Url)
 
 
-main : Program Never Model Msg
+main : Program () Model Msg
 main =
-    Navigation.program UrlChange
+    Browser.application
         { init = init
         , subscriptions = always Sub.none
         , update = update
         , view = view
+        , onUrlChange = UrlChange
+        , onUrlRequest = always NoOp
         }
 
 
@@ -48,8 +53,8 @@ type SearchQuery
     = SearchQuery String
 
 
-init : Navigation.Location -> ( Model, Cmd Msg )
-init _ =
+init : () -> Url -> Key -> ( Model, Cmd Msg )
+init _ _ _ =
     ( { notes = RemoteData.Loading
       , searchQuery = SearchQuery ""
       , noteEditState = Nothing
@@ -79,7 +84,7 @@ update msg model =
                     model.notes
                         |> RemoteData.map
                             (\notes ->
-                                EveryDict.get nId notes
+                                Dict.Any.get nId notes
                                     |> Maybe.map (\note -> NoteEditState note note.nBody)
                             )
                         |> RemoteData.withDefault Nothing
@@ -108,6 +113,9 @@ update msg model =
                 Just editState ->
                     saveNote editState model
 
+        NoOp ->
+            ( model, Cmd.none )
+
 
 saveNote : NoteEditState -> Model -> ( Model, Cmd Msg )
 saveNote (NoteEditState origNote newBody) model =
@@ -118,12 +126,13 @@ saveNote (NoteEditState origNote newBody) model =
         command =
             if newBody == origNote.nBody then
                 Cmd.none
+
             else
                 Requests.postNote newNote
     in
     ( { model
         | noteEditState = Nothing
-        , notes = RemoteData.map (EveryDict.insert newNote.nId newNote) model.notes
+        , notes = RemoteData.map (Dict.Any.insert newNote.nId newNote) model.notes
       }
     , command
     )
@@ -137,24 +146,30 @@ setQueryString queryString model =
     { model | searchQuery = SearchQuery queryString }
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    case model.notes of
-        RemoteData.Loading ->
-            text "Loading notes ..."
+    let
+        body =
+            case model.notes of
+                RemoteData.Loading ->
+                    text "Loading notes ..."
 
-        RemoteData.NotAsked ->
-            text "We should never end up in 'NotAsked' state"
+                RemoteData.NotAsked ->
+                    text "We should never end up in 'NotAsked' state"
 
-        RemoteData.Failure error ->
-            text ("Error loading notes" ++ toString error)
+                RemoteData.Failure error ->
+                    text ("Error loading notes: " ++ httpErrorToStrin error)
 
-        RemoteData.Success loadedNotes ->
-            viewPage
-                { notes = loadedNotes
-                , searchQuery = model.searchQuery
-                , noteEditState = model.noteEditState
-                }
+                RemoteData.Success loadedNotes ->
+                    viewPage
+                        { notes = loadedNotes
+                        , searchQuery = model.searchQuery
+                        , noteEditState = model.noteEditState
+                        }
+    in
+    { title = "Personal Knowledge Base"
+    , body = [ body ]
+    }
 
 
 viewPage : ModelWithNotes -> Html Msg
@@ -168,7 +183,7 @@ viewPage model =
 viewNotes : ModelWithNotes -> Html Msg
 viewNotes model =
     model.notes
-        |> EveryDict.values
+        |> Dict.Any.values
         |> List.filter (noteMatchesQuery model.searchQuery)
         |> List.sortBy .nTitle
         |> List.map (viewNote model.noteEditState model.searchQuery)
@@ -191,6 +206,7 @@ viewNote maybeEditState (SearchQuery searchQuery) note =
                 (\(NoteEditState { nId } editedBodyText) ->
                     if note.nId == nId then
                         noteBodyEditor editedBodyText
+
                     else
                         markdownBody note
                 )
@@ -228,3 +244,24 @@ noteMatchesQuery : SearchQuery -> Note -> Bool
 noteMatchesQuery (SearchQuery queryString) note =
     String.contains queryString note.nTitle
         || String.contains queryString note.nBody
+
+
+httpErrorToStrin : Http.Error -> String
+httpErrorToStrin error =
+    "Http Error : "
+        ++ (case error of
+                BadUrl x ->
+                    "Bad Url : " ++ x
+
+                Timeout ->
+                    "Time"
+
+                NetworkError ->
+                    "NetworkError"
+
+                BadStatus statusCode ->
+                    "BadStatus " ++ String.fromInt statusCode
+
+                BadBody bodyStr ->
+                    "BadBody " ++ bodyStr
+           )

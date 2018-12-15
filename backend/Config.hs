@@ -1,7 +1,6 @@
 module Config  (Config, parse, notesDir) where
 
 import Control.Monad (unless)
-import Data.Monoid
 import Options.Applicative (Parser, ParserInfo, execParser)
 import Options.Applicative.Builder (fullDesc, info, long, metavar, short, strOption)
 import System.Directory (doesDirectoryExist)

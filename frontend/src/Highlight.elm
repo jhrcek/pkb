@@ -8,6 +8,7 @@ highlight : String -> String -> Html a
 highlight part whole =
     if String.isEmpty part then
         Html.text whole
+
     else
         let
             highlightedPart =

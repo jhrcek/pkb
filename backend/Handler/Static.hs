@@ -23,9 +23,9 @@ indexHtml = get "/" $ do
     rawLazy $(embedFile "static/index.html")
 
 scriptJs :: ScottyC ()
-scriptJs = get "/script.js" $ do
+scriptJs = get "/main.js" $ do
     setContentType "text/javascript;charset=UTF-8"
-    rawLazy $(embedFile "static/script.js")
+    rawLazy $(embedFile "static/main.js")
 
 styleCss :: ScottyC ()
 styleCss = get "/style.css" $ do

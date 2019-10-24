@@ -1,4 +1,4 @@
-script=static/script.js
+script=static/main.js
 
 front:
 	cd frontend && elm make src/Main.elm --optimize --output=../$(script)

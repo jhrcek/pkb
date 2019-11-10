@@ -1,8 +1,18 @@
-module Note exposing (Note, NoteId(..), encodeNote, notesDecoder)
+module Note exposing
+    ( Note
+    , NoteId(..)
+    , Notes
+    , encodeNote
+    , getNotes
+    , notesDecoder
+    , postNote
+    )
 
 import Dict.Any exposing (AnyDict)
+import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode exposing (Value)
+import RemoteData exposing (WebData)
 
 
 type alias Note =
@@ -11,6 +21,10 @@ type alias Note =
     , nTitle : String
     , nBody : String
     }
+
+
+type alias Notes =
+    AnyDict Int NoteId Note
 
 
 type NoteId
@@ -50,3 +64,20 @@ encodeNote { nId, nFile, nTitle, nBody } =
         , ( "nTitle", Encode.string nTitle )
         , ( "nBody", Encode.string nBody )
         ]
+
+
+getNotes : (WebData Notes -> msg) -> Cmd msg
+getNotes toMsg =
+    Http.get
+        { url = "/notes"
+        , expect = Http.expectJson (toMsg << RemoteData.fromResult) notesDecoder
+        }
+
+
+postNote : (WebData Notes -> msg) -> Note -> Cmd msg
+postNote toMsg note =
+    Http.post
+        { url = "/notes"
+        , body = Http.jsonBody <| encodeNote note
+        , expect = Http.expectJson (toMsg << RemoteData.fromResult) notesDecoder
+        }

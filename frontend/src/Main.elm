@@ -4,15 +4,13 @@ import Browser
 import Browser.Navigation exposing (Key)
 import Dict.Any
 import Highlight
-import Html exposing (Html, button, details, div, input, summary, text, textarea)
+import Html exposing (Html)
 import Html.Attributes exposing (class, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http exposing (Error(..))
 import Markdown
-import Note exposing (Note)
+import Note exposing (Note, NoteId, Notes)
 import RemoteData exposing (WebData)
-import Requests
-import Types exposing (Msg(..), Notes)
 import Url exposing (Url)
 
 
@@ -43,6 +41,20 @@ type alias AbstractModel a =
     }
 
 
+type Msg
+    = UrlChange Url
+    | NotesReceived (WebData Notes)
+      -- Note search
+    | SetSearchQuery String
+    | ClearSearchQuery
+      -- Note editing
+    | EditNote NoteId
+    | NoteBodyChange String
+    | CancelNoteEdit
+    | SaveNoteEdit
+    | NoOp
+
+
 type
     NoteEditState
     -- Keep original note (to check if changes made) + String representing edit changes
@@ -59,7 +71,7 @@ init _ _ _ =
       , searchQuery = SearchQuery ""
       , noteEditState = Nothing
       }
-    , Requests.getNotes
+    , Note.getNotes NotesReceived
     )
 
 
@@ -128,7 +140,7 @@ saveNote (NoteEditState origNote newBody) model =
                 Cmd.none
 
             else
-                Requests.postNote newNote
+                Note.postNote NotesReceived newNote
     in
     ( { model
         | noteEditState = Nothing
@@ -152,13 +164,13 @@ view model =
         body =
             case model.notes of
                 RemoteData.Loading ->
-                    text "Loading notes ..."
+                    Html.text "Loading notes ..."
 
                 RemoteData.NotAsked ->
-                    text "We should never end up in 'NotAsked' state"
+                    Html.text "We should never end up in 'NotAsked' state"
 
                 RemoteData.Failure error ->
-                    text ("Error loading notes: " ++ httpErrorToStrin error)
+                    Html.text ("Error loading notes: " ++ httpErrorToString error)
 
                 RemoteData.Success loadedNotes ->
                     viewPage
@@ -174,7 +186,7 @@ view model =
 
 viewPage : ModelWithNotes -> Html Msg
 viewPage model =
-    div []
+    Html.div []
         [ searchBar model.searchQuery
         , viewNotes model
         ]
@@ -187,14 +199,14 @@ viewNotes model =
         |> List.filter (noteMatchesQuery model.searchQuery)
         |> List.sortBy .nTitle
         |> List.map (viewNote model.noteEditState model.searchQuery)
-        |> div []
+        |> Html.div []
 
 
 searchBar : SearchQuery -> Html Msg
 searchBar (SearchQuery queryString) =
-    div []
-        [ input [ type_ "text", onInput SetSearchQuery, value queryString ] []
-        , button [ onClick ClearSearchQuery ] [ text "Clear" ]
+    Html.div []
+        [ Html.input [ type_ "text", onInput SetSearchQuery, value queryString ] []
+        , Html.button [ onClick ClearSearchQuery ] [ Html.text "Clear" ]
         ]
 
 
@@ -214,29 +226,29 @@ viewNote maybeEditState (SearchQuery searchQuery) note =
                 |> Maybe.withDefault (markdownBody note)
 
         markdownBody n =
-            div [ class "note-body" ]
+            Html.div [ class "note-body" ]
                 [ Markdown.toHtml [] n.nBody
-                , button [ class "note-button", onClick (EditNote n.nId) ] [ text "Edit" ]
+                , Html.button [ class "note-button", onClick (EditNote n.nId) ] [ Html.text "Edit" ]
                 ]
     in
-    details []
-        [ summary [ class "note-title" ] [ Highlight.highlight searchQuery note.nTitle ]
+    Html.details []
+        [ Html.summary [ class "note-title" ] [ Highlight.highlight searchQuery note.nTitle ]
         , noteBodyView
         ]
 
 
 noteBodyEditor : String -> Html Msg
 noteBodyEditor editedBodyText =
-    div []
-        [ textarea
+    Html.div []
+        [ Html.textarea
             [ class "note-edit-area"
             , rows (List.length (String.lines editedBodyText) + 1)
             , value editedBodyText
             , onInput NoteBodyChange
             ]
             []
-        , button [ class "note-button", onClick CancelNoteEdit ] [ text "Cancel" ]
-        , button [ class "note-button", onClick SaveNoteEdit ] [ text "Save" ]
+        , Html.button [ class "note-button", onClick CancelNoteEdit ] [ Html.text "Cancel" ]
+        , Html.button [ class "note-button", onClick SaveNoteEdit ] [ Html.text "Save" ]
         ]
 
 
@@ -246,8 +258,8 @@ noteMatchesQuery (SearchQuery queryString) note =
         || String.contains queryString note.nBody
 
 
-httpErrorToStrin : Http.Error -> String
-httpErrorToStrin error =
+httpErrorToString : Http.Error -> String
+httpErrorToString error =
     "Http Error : "
         ++ (case error of
                 BadUrl x ->

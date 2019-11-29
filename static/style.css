@@ -21,3 +21,15 @@
 .note-body {
   overflow: auto;
 }
+
+.alert {
+  border: 2px solid red;
+  border-radius: 5px;
+  background-color: pink;
+  padding: 20px;
+}
+
+.alert-close {
+  float: right;
+  font-size: 20px;
+}

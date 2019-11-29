@@ -5,6 +5,7 @@ module Notes exposing
     , NoteId(..)
     , Notes
     , encodeNote
+    , fromList
     , getNotes
     , init
     , notesDecoder
@@ -51,17 +52,17 @@ type
 type alias Model =
     { notes : Notes
     , searchQuery : SearchQuery
-    , noteEditState : NoteEditState
+    , editState : NoteEditState
     }
 
 
 type Msg
-    = SetSearchQuery String
-    | ClearSearchQuery
-    | EditNote NoteId
-    | NoteBodyChange String
-    | CancelNoteEdit
-    | SaveNoteEdit
+    = SearchQueryChanged String
+    | SearchQueryCleared
+    | NoteEditStarted NoteId
+    | NoteBodyInputChanged String
+    | NoteEditCanceled
+    | NoteEditSaved
 
 
 type NoteId
@@ -72,7 +73,7 @@ init : Notes -> Model
 init notes =
     { notes = notes
     , searchQuery = SearchQuery ""
-    , noteEditState = NotEditing
+    , editState = NotEditing
     }
 
 
@@ -81,30 +82,31 @@ noteIdToInt (NoteId i) =
     i
 
 
-notesDecoder : Decoder (AnyDict Int NoteId Note)
+fromList : List Note -> Notes
+fromList =
+    List.map (\note -> ( note.nId, note ))
+        >> Dict.Any.fromList noteIdToInt
+
+
+notesDecoder : Decoder Notes
 notesDecoder =
     Decode.list noteDecoder
-        |> Decode.map (Dict.Any.fromList noteIdToInt)
+        |> Decode.map fromList
 
 
-noteDecoder : Decoder ( NoteId, Note )
+noteDecoder : Decoder Note
 noteDecoder =
     Decode.map4 Note
         (Decode.map NoteId (Decode.field "nId" Decode.int))
         (Decode.field "nFile" Decode.string)
         (Decode.field "nTitle" Decode.string)
         (Decode.field "nBody" Decode.string)
-        |> Decode.map (\note -> ( note.nId, note ))
 
 
 encodeNote : Note -> Value
 encodeNote { nId, nFile, nTitle, nBody } =
-    let
-        (NoteId noteId) =
-            nId
-    in
     Encode.object
-        [ ( "nId", Encode.int noteId )
+        [ ( "nId", Encode.int <| noteIdToInt nId )
         , ( "nFile", Encode.string nFile )
         , ( "nTitle", Encode.string nTitle )
         , ( "nBody", Encode.string nBody )
@@ -119,31 +121,31 @@ getNotes toMsg =
         }
 
 
-postNote : (WebData Notes -> msg) -> Note -> Cmd msg
+postNote : (WebData () -> msg) -> Note -> Cmd msg
 postNote toMsg note =
     Http.post
         { url = "/notes"
         , body = Http.jsonBody <| encodeNote note
-        , expect = Http.expectJson (toMsg << RemoteData.fromResult) notesDecoder
+        , expect = Http.expectWhatever (toMsg << RemoteData.fromResult)
         }
 
 
-update : (WebData Notes -> msg) -> Msg -> Model -> ( Model, Cmd msg )
-update notesReceived msg model =
+update : (WebData () -> msg) -> Msg -> Model -> ( Model, Cmd msg )
+update noteSaved msg model =
     case msg of
-        SetSearchQuery queryString ->
+        SearchQueryChanged queryString ->
             ( setQueryString queryString model
             , Cmd.none
             )
 
-        ClearSearchQuery ->
+        SearchQueryCleared ->
             ( setQueryString "" model
             , Cmd.none
             )
 
-        EditNote nId ->
+        NoteEditStarted nId ->
             ( { model
-                | noteEditState =
+                | editState =
                     case Dict.Any.get nId model.notes of
                         Just note ->
                             Editing note note.nBody
@@ -154,10 +156,10 @@ update notesReceived msg model =
             , Cmd.none
             )
 
-        NoteBodyChange newText ->
+        NoteBodyInputChanged newText ->
             ( { model
-                | noteEditState =
-                    case model.noteEditState of
+                | editState =
+                    case model.editState of
                         NotEditing ->
                             NotEditing
 
@@ -167,33 +169,36 @@ update notesReceived msg model =
             , Cmd.none
             )
 
-        CancelNoteEdit ->
-            ( { model | noteEditState = NotEditing }
+        NoteEditCanceled ->
+            ( { model | editState = NotEditing }
             , Cmd.none
             )
 
-        SaveNoteEdit ->
-            ( model
-            , saveNote notesReceived model.noteEditState
-            )
+        NoteEditSaved ->
+            saveNote noteSaved model
 
 
-saveNote : (WebData Notes -> msg) -> NoteEditState -> Cmd msg
-saveNote notesReceived editState =
-    case editState of
+saveNote : (WebData () -> msg) -> Model -> ( Model, Cmd msg )
+saveNote noteSaved model =
+    case model.editState of
         Editing origNote newBody ->
             let
                 newNote =
                     { origNote | nBody = newBody }
             in
             if newBody /= origNote.nBody then
-                postNote notesReceived newNote
+                ( { model
+                    | editState = NotEditing
+                    , notes = Dict.Any.insert newNote.nId newNote model.notes
+                  }
+                , postNote noteSaved newNote
+                )
 
             else
-                Cmd.none
+                ( model, Cmd.none )
 
         NotEditing ->
-            Cmd.none
+            ( model, Cmd.none )
 
 
 setQueryString :
@@ -218,15 +223,15 @@ notesListView model =
         |> Dict.Any.values
         |> List.filter (noteMatchesQuery model.searchQuery)
         |> List.sortBy .nTitle
-        |> List.map (viewNote model.noteEditState model.searchQuery)
+        |> List.map (viewNote model.editState model.searchQuery)
         |> Html.div []
 
 
 searchBar : SearchQuery -> Html Msg
 searchBar (SearchQuery queryString) =
     Html.div []
-        [ Html.input [ type_ "text", onInput SetSearchQuery, value queryString ] []
-        , Html.button [ onClick ClearSearchQuery ] [ Html.text "Clear" ]
+        [ Html.input [ type_ "text", onInput SearchQueryChanged, value queryString ] []
+        , Html.button [ onClick SearchQueryCleared ] [ Html.text "Clear" ]
         ]
 
 
@@ -248,7 +253,7 @@ viewNote editState (SearchQuery searchQuery) note =
         markdownBody n =
             Html.div [ class "note-body" ]
                 [ Markdown.toHtml [] n.nBody
-                , Html.button [ class "note-button", onClick (EditNote n.nId) ] [ Html.text "Edit" ]
+                , Html.button [ class "note-button", onClick (NoteEditStarted n.nId) ] [ Html.text "Edit" ]
                 ]
     in
     Html.details []
@@ -258,17 +263,17 @@ viewNote editState (SearchQuery searchQuery) note =
 
 
 noteBodyEditor : String -> Html Msg
-noteBodyEditor editedBodyText =
+noteBodyEditor noteBody =
     Html.div []
         [ Html.textarea
             [ class "note-edit-area"
-            , rows (List.length (String.lines editedBodyText) + 1)
-            , value editedBodyText
-            , onInput NoteBodyChange
+            , rows (List.length (String.lines noteBody) + 1)
+            , value noteBody
+            , onInput NoteBodyInputChanged
             ]
             []
-        , Html.button [ class "note-button", onClick CancelNoteEdit ] [ Html.text "Cancel" ]
-        , Html.button [ class "note-button", onClick SaveNoteEdit ] [ Html.text "Save" ]
+        , Html.button [ class "note-button", onClick NoteEditCanceled ] [ Html.text "Cancel" ]
+        , Html.button [ class "note-button", onClick NoteEditSaved ] [ Html.text "Save" ]
         ]
 
 

@@ -13,7 +13,7 @@ parse = do
   cfg <- execParser parserInfo
   notesDirExists <- doesDirectoryExist $ notesDir cfg
   unless notesDirExists . die $ "Notes directory does not exist " <> notesDir cfg
-  return cfg
+  pure cfg
 
 parserInfo :: ParserInfo Config
 parserInfo = info configParser fullDesc

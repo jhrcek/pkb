@@ -17,7 +17,7 @@ module Notes exposing
 import Dict.Any exposing (AnyDict)
 import Highlight
 import Html exposing (Html)
-import Html.Attributes exposing (class, rows, type_, value)
+import Html.Attributes exposing (class, disabled, rows, type_, value)
 import Html.Events exposing (onClick, onInput)
 import Http exposing (Error(..))
 import Json.Decode as Decode exposing (Decoder)
@@ -186,16 +186,12 @@ saveNote noteSaved model =
                 newNote =
                     { origNote | nBody = newBody }
             in
-            if newBody /= origNote.nBody then
-                ( { model
-                    | editState = NotEditing
-                    , notes = Dict.Any.insert newNote.nId newNote model.notes
-                  }
-                , postNote noteSaved newNote
-                )
-
-            else
-                ( model, Cmd.none )
+            ( { model
+                | editState = NotEditing
+                , notes = Dict.Any.insert newNote.nId newNote model.notes
+              }
+            , postNote noteSaved newNote
+            )
 
         NotEditing ->
             ( model, Cmd.none )
@@ -240,9 +236,13 @@ viewNote editState (SearchQuery searchQuery) note =
     let
         noteBodyView =
             case editState of
-                Editing { nId } editedBodyText ->
-                    if note.nId == nId then
-                        noteBodyEditor editedBodyText
+                Editing editedNote editedBodyText ->
+                    if note.nId == editedNote.nId then
+                        let
+                            contentChanged =
+                                editedNote.nBody /= editedBodyText
+                        in
+                        noteBodyEditor editedBodyText contentChanged
 
                     else
                         markdownBody note
@@ -262,8 +262,16 @@ viewNote editState (SearchQuery searchQuery) note =
         ]
 
 
-noteBodyEditor : String -> Html Msg
-noteBodyEditor noteBody =
+noteBodyEditor : String -> Bool -> Html Msg
+noteBodyEditor noteBody contentChanged =
+    let
+        saveAttribute =
+            if contentChanged then
+                onClick NoteEditSaved
+
+            else
+                disabled True
+    in
     Html.div []
         [ Html.textarea
             [ class "note-edit-area"
@@ -273,7 +281,7 @@ noteBodyEditor noteBody =
             ]
             []
         , Html.button [ class "note-button", onClick NoteEditCanceled ] [ Html.text "Cancel" ]
-        , Html.button [ class "note-button", onClick NoteEditSaved ] [ Html.text "Save" ]
+        , Html.button [ class "note-button", saveAttribute ] [ Html.text "Save" ]
         ]
 
 

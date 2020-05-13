@@ -17,3 +17,7 @@ back:
 clean:
 	rm $(script)
 	stack clean
+
+format:
+	git ls-files '*.hs' | xargs ormolu -m inplace
+	elm-format . --yes

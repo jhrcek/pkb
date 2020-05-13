@@ -1,4 +1,4 @@
-module Config  (Config, parse, notesDir) where
+module Config (Config, parse, notesDir) where
 
 import Control.Monad (unless)
 import Options.Applicative (Parser, ParserInfo, execParser)
@@ -6,7 +6,7 @@ import Options.Applicative.Builder (fullDesc, info, long, metavar, short, strOpt
 import System.Directory (doesDirectoryExist)
 import System.Exit (die)
 
-newtype Config = Config { notesDir :: FilePath }
+newtype Config = Config {notesDir :: FilePath}
 
 parse :: IO Config
 parse = do
@@ -19,8 +19,10 @@ parserInfo :: ParserInfo Config
 parserInfo = info configParser fullDesc
 
 configParser :: Parser Config
-configParser = Config
+configParser =
+  Config
     <$> strOption
-        ( long "notes-dir"
-       <> short 'd'
-       <> metavar "DIRECTORY")
+      ( long "notes-dir"
+          <> short 'd'
+          <> metavar "DIRECTORY"
+      )

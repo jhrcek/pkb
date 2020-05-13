@@ -2,7 +2,6 @@
 module Loader (loadNotes) where
 
 import Control.Monad (zipWithM)
-import Data.Monoid ((<>))
 import Data.Text.IO as T
 import Data.Text.Lazy (fromStrict, pack, replace)
 import Data.Text.Lazy.IO as LT

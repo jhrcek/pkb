@@ -1,8 +1,9 @@
-cabal-version:      >=1.10
+cabal-version:      3.0
 name:               pkb
 version:            0.1.0.0
-license:            BSD3
+license:            BSD-3-Clause
 license-file:       LICENSE
+maintainer:         honza.hrk@gmail.com
 author:             Jan Hrček
 homepage:           https://github.com/jhrcek/pkb
 synopsis:           Personal Knowledge Base
@@ -30,7 +31,7 @@ executable pkb
     ghc-options:      -Wall
     build-depends:
         aeson,
-        base,
+        base >=4.13 && <5,
         bytestring,
         data-default-class,
         directory,
